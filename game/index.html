@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EMBERLINE — Kestrel Yard | tactical FPS</title>
+<style>
+  :root { --amber:#e8a33d; --sable:#4da3ff; --ember:#ff6a3d; --ink:#0d0f12; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0d0f12;
+    font-family:"Segoe UI",system-ui,Arial,sans-serif; color:#e8e6df; user-select:none; }
+  #app { position:fixed; inset:0; }
+  canvas.game { display:block; width:100%; height:100%; }
+  .hidden { display:none !important; }
+
+  /* ---------- menu / start screen ---------- */
+  #menu { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:18px; background:radial-gradient(ellipse at 50% 30%, #2a2118 0%, #0d0f12 70%);
+    z-index:40; text-align:center; }
+  #menu h1 { font-size:64px; letter-spacing:14px; color:var(--amber); text-shadow:0 0 32px rgba(232,163,61,.45); }
+  #menu h2 { font-size:15px; letter-spacing:6px; color:#9a938a; font-weight:400; }
+  #menu .tag { font-size:13px; color:#c9c2b4; max-width:560px; line-height:1.6; }
+  #deployBtn { font-size:20px; letter-spacing:4px; padding:14px 44px; cursor:pointer;
+    background:var(--amber); color:#14100a; border:0; font-weight:700; }
+  #deployBtn:hover { background:#f5bc5e; }
+  #menu .keys { font-size:12px; color:#8b8578; line-height:1.9; }
+  #menu .keys b { color:#d8d2c4; }
+
+  /* ---------- HUD ---------- */
+  #hud { position:absolute; inset:0; pointer-events:none; z-index:10; }
+  #topbar { position:absolute; top:14px; left:50%; transform:translateX(-50%);
+    display:flex; align-items:center; gap:14px; font-weight:700; }
+  #topbar .team { font-size:22px; padding:4px 14px; background:rgba(10,12,16,.72); border:1px solid #333; }
+  #topbar .team.sable { color:var(--sable); } #topbar .team.ember { color:var(--ember); }
+  #timer { font-size:22px; padding:4px 12px; background:rgba(10,12,16,.72); border:1px solid #333; min-width:76px; text-align:center; }
+  #timer.low { color:#ff5a4d; }
+  #phaseLabel { position:absolute; top:52px; left:50%; transform:translateX(-50%);
+    font-size:12px; letter-spacing:3px; color:#b9b2a4; background:rgba(10,12,16,.6); padding:3px 10px; }
+  #minimap { position:absolute; top:14px; left:14px; border:1px solid #444; background:rgba(8,10,13,.78); }
+  #feed { position:absolute; top:14px; right:14px; text-align:right; font-size:13px; line-height:1.7; }
+  #feed div { background:rgba(10,12,16,.66); padding:2px 8px; margin-bottom:3px; }
+  #feed .sable { color:var(--sable); } #feed .ember { color:var(--ember); }
+  #crosshair { position:absolute; left:50%; top:50%; width:0; height:0; }
+  #crosshair i { position:absolute; background:#e8e6df; box-shadow:0 0 3px #000; }
+  #crosshair .dot { width:3px; height:3px; left:-1px; top:-1px; border-radius:50%; }
+  #crosshair .t { width:2px; height:9px; left:-1px; } #crosshair .b { width:2px; height:9px; left:-1px; }
+  #crosshair .l { width:9px; height:2px; top:-1px; } #crosshair .r { width:9px; height:2px; top:-1px; }
+  #hitmark { position:absolute; left:50%; top:50%; width:22px; height:22px; margin:-11px 0 0 -11px; opacity:0; }
+  #hitmark i { position:absolute; width:9px; height:2px; background:#fff; }
+  #hitmark .a { transform:rotate(45deg); left:0; top:4px; } #hitmark .b { transform:rotate(-45deg); right:0; top:4px; }
+  #hitmark .c { transform:rotate(-45deg); left:0; bottom:4px; } #hitmark .d { transform:rotate(45deg); right:0; bottom:4px; }
+  #hitmark.kill i { background:#ff4d3d; }
+  #dmgVin { position:absolute; inset:0; pointer-events:none; opacity:0;
+    background:radial-gradient(ellipse at center, transparent 55%, rgba(255,30,10,.55) 100%); }
+  #healthBox { position:absolute; left:18px; bottom:18px; font-size:15px; line-height:1.5;
+    background:rgba(10,12,16,.72); border:1px solid #333; padding:8px 14px; }
+  #healthBox .hp { font-size:30px; font-weight:800; color:#8fd98f; }
+  #healthBox .hp.low { color:#ff5a4d; }
+  #ammoBox { position:absolute; right:18px; bottom:18px; text-align:right;
+    background:rgba(10,12,16,.72); border:1px solid #333; padding:8px 14px; }
+  #ammoBox .mag { font-size:30px; font-weight:800; }
+  #ammoBox .mag.empty { color:#ff5a4d; }
+  #ammoBox .wname { font-size:13px; letter-spacing:2px; color:var(--amber); }
+  #teamBox { position:absolute; left:18px; bottom:118px; font-size:13px; line-height:1.8;
+    background:rgba(10,12,16,.6); padding:6px 10px; }
+  #bombBox { position:absolute; left:50%; bottom:96px; transform:translateX(-50%);
+    font-size:15px; font-weight:700; letter-spacing:2px; background:rgba(10,12,16,.72);
+    border:1px solid #555; padding:6px 16px; }
+  #banner { position:absolute; left:50%; top:34%; transform:translate(-50%,-50%); text-align:center; }
+  #banner h3 { font-size:44px; letter-spacing:8px; text-shadow:0 2px 18px #000; }
+  #banner p { font-size:15px; color:#cfc8b8; margin-top:8px; letter-spacing:1px; }
+  #banner .win { color:var(--amber); } #banner .lose { color:#ff5a4d; }
+  #hint { position:absolute; left:50%; bottom:150px; transform:translateX(-50%);
+    font-size:13px; color:#d8d2c4; background:rgba(10,12,16,.66); padding:5px 12px; letter-spacing:1px; }
+  #plantBar { position:absolute; left:50%; top:58%; transform:translateX(-50%); width:220px; }
+  #plantBar .lbl { text-align:center; font-size:12px; letter-spacing:3px; margin-bottom:4px; }
+  #plantBar .track { height:8px; background:#222; border:1px solid #555; }
+  #plantBar .fill { height:100%; width:0%; background:var(--amber); }
+  #spec { position:absolute; left:50%; bottom:170px; transform:translateX(-50%);
+    font-size:13px; color:#9a938a; letter-spacing:2px; }
+
+  /* ---------- buy menu ---------- */
+  #buy { position:absolute; inset:0; z-index:30; display:flex; align-items:center; justify-content:center;
+    background:rgba(6,8,10,.72); pointer-events:auto; }
+  #buy .panel { width:640px; background:#12151a; border:1px solid #3a3f47; padding:22px 26px; }
+  #buy h3 { letter-spacing:4px; color:var(--amber); font-size:18px; margin-bottom:4px; }
+  #buy .money { font-size:15px; color:#8fd98f; margin-bottom:14px; }
+  #buy table { width:100%; border-collapse:collapse; font-size:14px; }
+  #buy td { padding:8px 6px; border-bottom:1px solid #262a30; }
+  #buy td.key { width:34px; color:var(--amber); font-weight:700; }
+  #buy td.price { text-align:right; color:#8fd98f; width:80px; }
+  #buy td.owned { color:#8b8578; }
+  #buy .close { margin-top:14px; font-size:12px; color:#9a938a; letter-spacing:1px; }
+  #help { position:absolute; right:14px; bottom:118px; font-size:11px; color:#8b8578; text-align:right; line-height:1.7; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud" class="hidden">
+    <canvas id="minimap" width="170" height="118"></canvas>
+    <div id="topbar">
+      <span class="team sable">SABLE <b id="scoreS">0</b></span>
+      <span id="timer">1:40</span>
+      <span class="team ember"><b id="scoreE">0</b> EMBER</span>
+    </div>
+    <div id="phaseLabel">BUY PHASE</div>
+    <div id="feed"></div>
+    <div id="crosshair"><i class="dot"></i><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i></div>
+    <div id="hitmark"><i class="a"></i><i class="b"></i><i class="c"></i><i class="d"></i></div>
+    <div id="dmgVin"></div>
+    <div id="healthBox"><span class="hp" id="hpVal">100</span> HP<br><span id="armorVal">ARMOR 0</span> &nbsp;·&nbsp; <span id="moneyVal">$800</span></div>
+    <div id="ammoBox"><div class="wname" id="wName">P9 SIDEARM</div><span class="mag" id="magVal">12</span><span id="resVal"> / 36</span><br><span id="fireMode">SEMI</span></div>
+    <div id="teamBox"></div>
+    <div id="bombBox" class="hidden">SPIKE PLANTED — <span id="bombTimer">40</span>s</div>
+    <div id="banner" class="hidden"><h3 id="bannerTitle"></h3><p id="bannerSub"></p></div>
+    <div id="hint" class="hidden"></div>
+    <div id="plantBar" class="hidden"><div class="lbl" id="plantLbl">PLANTING SPIKE…</div><div class="track"><div class="fill" id="plantFill"></div></div></div>
+    <div id="spec" class="hidden"></div>
+    <div id="help">WASD move · SHIFT walk · C crouch · R reload<br>1/2/3 weapons · 4 frag · B buy · E plant/defuse</div>
+  </div>
+  <div id="buy" class="hidden">
+    <div class="panel">
+      <h3>BUY — KESTREL YARD ARMORY</h3>
+      <div class="money" id="buyMoney">$800 — press 1–6 to buy, B or ESC to close</div>
+      <table id="buyTable"></table>
+      <div class="close">Prices in credits. Your loadout carries into the round; unused credits stay in your wallet.</div>
+    </div>
+  </div>
+  <div id="menu">
+    <h1>EMBERLINE</h1>
+    <h2>KESTREL YARD &nbsp;·&nbsp; TACTICAL 5 v 5 &nbsp;·&nbsp; FIRST TO 5 ROUNDS</h2>
+    <p class="tag">A round-based tactical shooter. Sable attacks, Ember defends — sides swap at
+      halftime. Plant the spike at Crane Bay (A) or Silo Row (B), or wipe the enemy team.
+      Earn credits every round and spend them in the buy menu. Stopping to aim pays:
+      recoil and spread punish firing on the move, and a headshot ends an argument.</p>
+    <button id="deployBtn">▶&nbsp; DEPLOY</button>
+    <div class="keys"><b>WASD</b> move &nbsp;·&nbsp; <b>Mouse</b> aim &nbsp;·&nbsp; <b>Click</b> fire &nbsp;·&nbsp; <b>R</b> reload<br>
+      <b>C</b> crouch &nbsp;·&nbsp; <b>Shift</b> walk slow &nbsp;·&nbsp; <b>1/2/3</b> weapons &nbsp;·&nbsp; <b>4</b> frag charge<br>
+      <b>B</b> buy menu &nbsp;·&nbsp; <b>E</b> plant / defuse the spike &nbsp;·&nbsp; <b>Esc</b> release mouse</div>
+  </div>
+</div>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.min.js" } }
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
