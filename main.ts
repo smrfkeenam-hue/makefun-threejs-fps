@@ -1,4 +1,4 @@
-// EMBERLINE — Kestrel Yard. A threejs-fps-01 entry (Node 22, standard
+// EMBERLINE — Kestrel Yard. A best-game-01 entry (Node 22, standard
 // library only). The program hands the game in: it copies game/ and
 // screenshots/ from beside this file to /output and writes
 // /output/dossier.json with the vendored make.fun library, exactly as the
@@ -11,7 +11,7 @@
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildDossier } from './vendor/makefun-threejs.ts';
+import { buildDossier } from './vendor/makefun-game.ts';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
@@ -28,5 +28,5 @@ if (existsSync(join(here, 'screenshots'))) cpSync(join(here, 'screenshots'), joi
 // screenshots/ and dossier.json).
 writeFileSync(
   join(out, 'dossier.json'),
-  buildDossier(out, { text_max_bytes: 163840, screenshots: { max: 4, max_bytes: 262144 }, game_max_files: 993, game_max_bytes: 50331648 }),
+  buildDossier(out, { text_max_bytes: 163840, screenshots: { max: 4, max_bytes: 262144 }, game_max_files: 993, game_max_bytes: 50331648, game_path_max_bytes: 1000 }),
 );
